@@ -160,7 +160,7 @@ def scrape_data():
 
     index_indicators = []
 
-    YR =  time.time() - 5*365*24*3600
+    YR =  time.time() - 1*365*24*3600
 
     for indicator_name in indexes_yahoo:
         symbol = indexes_yahoo[indicator_name]
