@@ -12,7 +12,7 @@ import scraper as sc
 DEBUG = True
 
 # instantiate the app
-app = Flask(__name__, static_url_path='',static_folder=os.path.abspath('/client/dist'))
+app = Flask(__name__, static_url_path='',static_folder='/var/www/html/flaskapp/client/dist')
 app.config.from_object(__name__)
 
 # enable CORS
