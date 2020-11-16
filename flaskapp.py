@@ -1,5 +1,6 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 # from flask_cors import CORS
+import os
 import scraper as sc
 
 # https://testdriven.io/blog/developing-a-single-page-app-with-flask-and-vuejs/
@@ -11,7 +12,7 @@ import scraper as sc
 DEBUG = True
 
 # instantiate the app
-app = Flask(__name__, static_url_path='',static_folder='client/dist',)
+app = Flask(__name__, static_url_path='',static_folder=os.path.abspath('/client/dist'))
 app.config.from_object(__name__)
 
 # enable CORS
