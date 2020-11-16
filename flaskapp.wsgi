@@ -1,5 +1,5 @@
 #flaskapp.wsgi
 import sys
-sys.path.insert(0, '/var/www/html/flaskapp')
+sys.path.insert(0, '/var/www/html/smf-macro-dashboard')
 
-from flaskapp import app as application
+from smf-macro-dashboard import app as application
