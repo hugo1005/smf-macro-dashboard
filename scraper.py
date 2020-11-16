@@ -190,6 +190,14 @@ def scrape_data():
 
         export_data[col.replace('_',' ')] = json.loads(sample_data.to_json(orient='records'))
 
+    for col in merged_indexes.columns:
+        sample_data = merged_indexes[col].reset_index()
+        sample_data.columns = ['date','value']
+        sample_data['date'] = sample_data['date'].astype('str')
+
+        export_data[col.replace('_',' ')] = json.loads(sample_data.to_json(orient='records'))
+
+
     return export_data
 
 # if __name__ == '__main__':
