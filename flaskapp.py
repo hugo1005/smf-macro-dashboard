@@ -26,7 +26,8 @@ chart_data_obj = sc.scrape_data()
 @app.route("/", methods=['GET'])
 def index():
     print("reached")
-    return app.send_static_file("index.html")
+    return "Hello World"
+    # return app.send_static_file("index.html")
 
 # sanity check route
 @app.route('/ping', methods=['GET'])
