@@ -149,6 +149,7 @@ def scrape_macro_indicator(indicator_name, indicator_country, indicator_code):
     return df
 
 def scrape_data():
+    print("Scraping Macro Data")
     macro_indicators_data = []
 
     for indicator_obj in macro_indicators:
@@ -197,7 +198,8 @@ def scrape_data():
 
         export_data[col.replace('_',' ')] = json.loads(sample_data.to_json(orient='records'))
 
-
+    print("Scraping Macro Data Completed!")
+    
     return export_data
 
 # if __name__ == '__main__':
