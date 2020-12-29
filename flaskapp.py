@@ -70,16 +70,6 @@ def risk_data():
 
     return jsonify(risk_data_obj)
 
-if __name__ == '__main__':
-    app.run()
-
-from flask import Flask
-app = Flask(__name__)
-
-@app.route('/')
-def hello_world():
-	return 'Hello, World!'
-
 if __name__ == "__main__":
     last_updated_macro = time.time()
     last_updated_risk = time.time()
