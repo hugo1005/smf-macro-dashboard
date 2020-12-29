@@ -25,11 +25,11 @@ data = [{"date":"2019-08-09","value":20.6},{"date":"2019-08-13","value":20.6},{"
 global last_updated_risk, risk_data_obj, one_day
 global last_updated_macro, macro_data_obj
 
-last_updated_macro = time.time()
-last_updated_risk = time.time()
+last_updated_macro = 0
+last_updated_risk = 0
 one_day = 24 * 60 * 60  
-macro_data_obj = sc.scrape_data()
-risk_data_obj = ri.get_attribution_report()
+macro_data_obj = None
+risk_data_obj = None
 
 
 # TODO Re-enable in production
