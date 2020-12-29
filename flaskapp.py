@@ -35,7 +35,7 @@ risk_data_obj = None
 # TODO Re-enable in production
 @app.route("/", methods=['GET'])
 def index():
-    print("reached")
+    print("Serving index page...")
     # return "Hello World"
     return app.send_static_file("index.html")
 
@@ -50,6 +50,7 @@ def chart_test():
 
 @app.route('/chart_data', methods=['GET'])
 def chart_data():
+    print("Serving chart data...")
     global last_updated_macro, macro_data_obj, one_day
     print("Fetching chart data", time.time(), last_updated_macro, time.time() - last_updated_macro)
     if time.time() - last_updated_macro > one_day: 
@@ -61,8 +62,9 @@ def chart_data():
 
 @app.route('/risk_data', methods=['GET'])
 def risk_data():
+    print("Serving risk data...")
     global last_updated_risk, risk_data_obj, one_day
-    print("Fetching risk data", time.time(), last_updated_risk, time.time() - last_updated_risk)
+
     if time.time() - last_updated_risk > one_day: 
         print("Updating Risk Data")
         risk_data_obj = ri.get_attribution_report()
@@ -71,10 +73,6 @@ def risk_data():
     return jsonify(risk_data_obj)
 
 if __name__ == "__main__":
-    last_updated_macro = time.time()
-    last_updated_risk = time.time()
-    one_day = 24 * 60 * 60  
-    macro_data_obj = sc.scrape_data()
-    risk_data_obj = ri.get_attribution_report()
-
     app.run()
+
+#https://vishnut.me/blog/ec2-flask-apache-setup.html
