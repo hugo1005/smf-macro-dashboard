@@ -595,7 +595,8 @@ def get_attribution_report():
     x_1 = benchmark_port_returns['BENCHMARK'].values.reshape(-1,)
     x_0 = np.ones(x_1.shape)
     X = np.array([x_0,x_1]).T
-    alpha, beta = (np.linalg.inv(X.T @ X) @ X.T @ Y).reshape(-1,)
+    
+    alpha, beta = (np.matmul(np.linalg.inv(np.matmul(X.T, X)), np.matmul(X.T, Y))).reshape(-1,)
     alpha, beta = round(alpha,3), round(beta,3)
     sharpe = round(sharpe.values[0],3)
 
