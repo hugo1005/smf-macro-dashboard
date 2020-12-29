@@ -36,8 +36,8 @@ risk_data_obj = ri.get_attribution_report()
 @app.route("/", methods=['GET'])
 def index():
     print("Serving index page...")
-    # return "Hello World"
-    return app.send_static_file("index.html")
+    return "Hello World"
+    # return app.send_static_file("index.html")
 
 # sanity check route
 @app.route('/ping', methods=['GET'])
