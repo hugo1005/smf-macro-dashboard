@@ -72,7 +72,8 @@ def index():
 
 #     return jsonify(risk_data_obj)
 
-# if __name__ == "__main__":
-#     app.run()
+if __name__ == "__main__":
+    print("Starting app...")
+    app.run()
 
 #https://vishnut.me/blog/ec2-flask-apache-setup.html

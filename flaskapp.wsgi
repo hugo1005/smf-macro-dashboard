@@ -1,8 +1,8 @@
 #flaskapp.wsgi
 
-#activate_this = '/home/ubuntu/flaskapp/venv/bin/activate_this.py'
-#with open(activate_this) as f:
-#	exec(f.read(), dict(__file__=activate_this))
+activate_this = '/home/ubuntu/flaskapp/venv/bin/activate_this.py'
+with open(activate_this) as f:
+	exec(f.read(), dict(__file__=activate_this))
 
 import sys
 #import logging
