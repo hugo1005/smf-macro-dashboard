@@ -215,7 +215,7 @@ def fit_historical_sector_weights(region, idx_closes, force_sector_weights = Non
 
                     q = m.sum([c[i] for i in range(nc)])
                     q2 = m.sum([c[i]**2 for i in range(nc)])
-                    s = m.sum([c[i]*xd[i] for i in range(nc)]) # Multiply each column by the coefficient and sum to get predicted y
+                    s = m.sum([c[i]*xd[i] for i in range(nc)]) # Multiply each column by the coefficient and sum to get predicted y
                     eq =  m.Const(1)
                     
                     m.Equation(q == eq) # Constrain weights to sum to one
@@ -428,7 +428,7 @@ def attribute_regional_performance(idx_closes, equity_closes, user_weights, sect
         'Benchmark Total Return': B,
         #'Benchmark Total Return (Check)': sum([W_i_avg[sector]*B_i[sector] for sector in sectors]), # Approx
         #'Benchmark Weight (Check)': sum([W_i_avg[sector] for sector in sectors]), # Approx
-        'Portfolio Outperformance': R - B, # Note R - B != S + A as our benchmark weights are only approximations not exact.
+        'Portfolio Outperformance': R - B, # Note R - B != S + A as our benchmark weights are only approximations not exact.
         'Selection Effect': BrinsonFachlerModel['Selection'].sum(),
         'Allocation Effect': BrinsonFachlerModel['Allocation'].sum(),
         'Total Effect': BrinsonFachlerModel['Selection'].sum() + BrinsonFachlerModel['Allocation'].sum(),
