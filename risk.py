@@ -176,7 +176,7 @@ def fit_historical_sector_weights(region, idx_closes, force_sector_weights = Non
         for quarter in range(1,5):
             quarter_returns = sector_returns[(sector_returns.index.quarter == quarter) & (sector_returns.index.year == year)]
             if len(quarter_returns) > 0:
-
+                
                 if type(force_sector_weights) == type(None):
 
                     X = quarter_returns.drop(columns=region)
@@ -229,7 +229,6 @@ def fit_historical_sector_weights(region, idx_closes, force_sector_weights = Non
                     quarter_sector_weights_approx[year][quarter] = {X_cols[i]: c[i].value[0]for i in range(nc)}
                 else:
                     quarter_sector_weights_approx[year][quarter] = force_sector_weights
-                
     return quarter_sector_weights_approx
 
 simple_return = lambda series, period, shift: (series.iloc[-1-shift] / series.iloc[-period-shift]) - 1
