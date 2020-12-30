@@ -6,7 +6,7 @@ with open(activate_this) as f:
 
 import sys
 
-sys.path.insert(0,"/var/www/html/flaskapp/")
+sys.path.insert(0,"/var/www/html/flaskapp")
 
 print("Importing flaskapp...")
 
