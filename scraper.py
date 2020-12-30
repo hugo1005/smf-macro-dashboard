@@ -106,36 +106,40 @@ headers_yahoo = {
     }
 
 macro_indicators = [
-    {'indicator_name': 'CPI_MoM', 'indicator_country':'germany', 'indicator_code': 128},
-    {'indicator_name': 'CPI_MoM', 'indicator_country':'usa', 'indicator_code': 56},
-    {'indicator_name': '10Y_rate', 'indicator_country':'germany', 'indicator_code': 580},
-    {'indicator_name': '10Y_rate', 'indicator_country':'usa', 'indicator_code': 571},
-    {'indicator_name': 'PMI', 'indicator_country':'germany', 'indicator_code': 136},
-    {'indicator_name': 'PMI', 'indicator_country':'usa', 'indicator_code': 829},
-    {'indicator_name': 'GDP_QoQ', 'indicator_country':'germany', 'indicator_code': 131},
-    {'indicator_name': 'GDP_QoQ', 'indicator_country':'usa', 'indicator_code': 375},
-    {'indicator_name': 'consumer_confidence', 'indicator_country':'euro', 'indicator_code': 49},
-    {'indicator_name': 'consumer_confidence', 'indicator_country':'usa', 'indicator_code': 48},
-    {'indicator_name': 'unemployment_rate', 'indicator_country':'germany', 'indicator_code': 142},
-    {'indicator_name': 'unemployment_rate', 'indicator_country':'usa', 'indicator_code': 300},
-    {'indicator_name': 'balance_of_trade', 'indicator_country':'germany', 'indicator_code': 141},
-    {'indicator_name': 'balance_of_trade', 'indicator_country':'usa', 'indicator_code': 286},
-    {'indicator_name': 'current_account', 'indicator_country':'germany', 'indicator_code': 81},
-    {'indicator_name': 'current_account', 'indicator_country':'usa', 'indicator_code': 1893},
+    {'indicator_name': 'CPI_MoM', 'indicator_country':'germany', 'indicator_code': 128, 'category': 'SURVEY'},
+    {'indicator_name': 'CPI_MoM', 'indicator_country':'usa', 'indicator_code': 56, 'category': 'SURVEY'},
+    {'indicator_name': '10Y_rate', 'indicator_country':'germany', 'indicator_code': 580, 'category': 'BOND'},
+    {'indicator_name': '10Y_rate', 'indicator_country':'usa', 'indicator_code': 571, 'category': 'BOND'},
+    {'indicator_name': 'PMI', 'indicator_country':'germany', 'indicator_code': 136, 'category': 'SURVEY'},
+    {'indicator_name': 'PMI', 'indicator_country':'usa', 'indicator_code': 829, 'category': 'SURVEY'},
+    {'indicator_name': 'GDP_QoQ', 'indicator_country':'germany', 'indicator_code': 131, 'category': 'METRIC'},
+    {'indicator_name': 'GDP_QoQ', 'indicator_country':'usa', 'indicator_code': 375, 'category': 'METRIC'},
+    {'indicator_name': 'consumer_confidence', 'indicator_country':'euro', 'indicator_code': 49, 'category': 'SURVEY'},
+    {'indicator_name': 'consumer_confidence', 'indicator_country':'usa', 'indicator_code': 48, 'category': 'SURVEY'},
+    {'indicator_name': 'unemployment_rate', 'indicator_country':'germany', 'indicator_code': 142, 'category': 'METRIC'},
+    {'indicator_name': 'unemployment_rate', 'indicator_country':'usa', 'indicator_code': 300, 'category': 'METRIC'},
+    {'indicator_name': 'balance_of_trade', 'indicator_country':'germany', 'indicator_code': 141, 'category': 'METRIC'},
+    {'indicator_name': 'balance_of_trade', 'indicator_country':'usa', 'indicator_code': 286, 'category': 'METRIC'},
+    {'indicator_name': 'current_account', 'indicator_country':'germany', 'indicator_code': 81, 'category': 'METRIC'},
+    {'indicator_name': 'current_account', 'indicator_country':'usa', 'indicator_code': 1893, 'category': 'METRIC'},
 ]
 
 indexes_yahoo = {
-    'Gold (SPDR Index)': 'GLD',
+    'Gold': 'GLD',
     'SP500': 'SPY',
     'DAX': 'DAX',
     'EUROSTOXX50': 'FEZ',
+    'EUROSTOXX600': 'EXSA.DE',
+    'VIX':'^VIX'
 }
 
 indexes_forex = {
-    'WTI Crude': 8849
+    'WTI Crude': 8849,
+    'EURUSD': 1,
+    'USDJPY': 3
 }
 
-def scrape_macro_indicator(indicator_name, indicator_country, indicator_code):
+def scrape_macro_indicator(indicator_name, indicator_country, indicator_code, indicator_category):
     data = requests.get('https://sbcharts.investing.com/events_charts/us/%s.json' % indicator_code, headers=headers_investing).json()
     df = pd.DataFrame(data['attr'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
@@ -144,7 +148,7 @@ def scrape_macro_indicator(indicator_name, indicator_country, indicator_code):
     # df = df[['actual_state', 'actual']]
     df = df[['actual']]
     # df.columns = ['%s_%s_vs_forecast' % (indicator_name,indicator_country),'%s_%s_value'% (indicator_name,indicator_country)]
-    df.columns = ['%s_%s'% (indicator_name,indicator_country)]
+    df.columns = ['%s_%s_%s'% (indicator_category, indicator_name,indicator_country)]
 
     return df
 
@@ -156,8 +160,9 @@ def scrape_data():
         indicator_name = indicator_obj['indicator_name']
         indicator_country = indicator_obj['indicator_country']
         indicator_code = indicator_obj['indicator_code']
+        indicator_category = indicator_obj['category']
 
-        macro_indicators_data.append(scrape_macro_indicator(indicator_name, indicator_country, indicator_code))
+        macro_indicators_data.append(scrape_macro_indicator(indicator_name, indicator_country, indicator_code, indicator_category))
 
     index_indicators = []
 
@@ -167,7 +172,7 @@ def scrape_data():
         symbol = indexes_yahoo[indicator_name]
         df= get_yahoo_symbol_dataframe(symbol, YR, time.time())
         df = pd.DataFrame(df['close'])
-        df.columns = [indicator_name]
+        df.columns = ['INDEX_%s' % indicator_name]
 
         index_indicators.append(df)
 
@@ -175,7 +180,7 @@ def scrape_data():
         symbol = indexes_forex[indicator_name]
         df= get_forexpros_symbol_dataframe(symbol, YR, time.time())
         df = pd.DataFrame(df['close'])
-        df.columns = [indicator_name]
+        df.columns = ['FX|COMMODITY_%s' % indicator_name]
 
         index_indicators.append(df)
 
@@ -189,14 +194,14 @@ def scrape_data():
         sample_data.columns = ['date','value']
         sample_data['date'] = sample_data['date'].astype('str')
 
-        export_data[col.replace('_',' ')] = json.loads(sample_data.to_json(orient='records'))
+        export_data[col.upper()] = json.loads(sample_data.to_json(orient='records'))
 
     for col in merged_indexes.columns:
         sample_data = merged_indexes[col].reset_index()
         sample_data.columns = ['date','value']
         sample_data['date'] = sample_data['date'].astype('str')
 
-        export_data[col.replace('_',' ')] = json.loads(sample_data.to_json(orient='records'))
+        export_data[col.upper()] = json.loads(sample_data.to_json(orient='records'))
 
     print("Scraping Macro Data Completed!")
     
