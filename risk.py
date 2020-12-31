@@ -421,16 +421,21 @@ def attribute_regional_performance(idx_closes, equity_closes, user_weights, sect
     } for sector in sectors]).set_index('Sector'))
 
     R = (BrinsonFachlerModel['Portfolio Return'] * BrinsonFachlerModel['Portfolio Weight']).sum()
-
+    
+    outperformance = R - B
+    rescale_by = (BrinsonFachlerModel['Selection'].sum() + BrinsonFachlerModel['Allocation'].sum()) / outperformance
+    corrected_total_effect = outperformance # There is often an error due to apporximation process
+    # so we rescale our effects to match true value
+    
     aggregate_BF_Model = pd.DataFrame([{
         'Portfolio Total Return': R,
         'Benchmark Total Return': B,
         #'Benchmark Total Return (Check)': sum([W_i_avg[sector]*B_i[sector] for sector in sectors]), # Approx
         #'Benchmark Weight (Check)': sum([W_i_avg[sector] for sector in sectors]), # Approx
-        'Portfolio Outperformance': R - B, # Note R - B != S + A as our benchmark weights are only approximations not exact.
-        'Selection Effect': BrinsonFachlerModel['Selection'].sum(),
-        'Allocation Effect': BrinsonFachlerModel['Allocation'].sum(),
-        'Total Effect': BrinsonFachlerModel['Selection'].sum() + BrinsonFachlerModel['Allocation'].sum(),
+        'Portfolio Outperformance': outperformance, # Note R - B != S + A as our benchmark weights are only approximations not exact.
+        'Selection Effect': BrinsonFachlerModel['Selection'].sum() / rescale_by,
+        'Allocation Effect': BrinsonFachlerModel['Allocation'].sum() / rescale_by,
+        'Total Effect': corrected_total_effect,
     }]).T
 
     aggregate_BF_Model.columns = ['Returns (%)']
