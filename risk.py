@@ -229,6 +229,9 @@ def fit_historical_sector_weights(region, idx_closes, force_sector_weights = Non
                     quarter_sector_weights_approx[year][quarter] = {X_cols[i]: c[i].value[0]for i in range(nc)}
                 else:
                     quarter_sector_weights_approx[year][quarter] = force_sector_weights
+
+    print(region)
+    print(quarter_sector_weights_approx)
     return quarter_sector_weights_approx
 
 simple_return = lambda series, period, shift: (series.iloc[-1-shift] / series.iloc[-period-shift]) - 1
@@ -334,16 +337,20 @@ def normalise_regional_portfolio_weighting(regional_sectors, user_weights):
 
 # Brinson Model Code
 
-def compute_portfolio_sector_return(closes, regional_sectors, sector, period):
+def compute_portfolio_sector_return(closes, regional_sectors, sector, period, user_weights):
     n = len(regional_sectors[sector])
         
     if n > 0:
         sector_return = 0
-        
+        sector_weight = 0
+
         for stock in regional_sectors[sector]:
-            sector_return += (closes[stock].iloc[-1] / closes[stock].iloc[0]) - 1
+            stock_return = (closes[stock].iloc[-1] / closes[stock].iloc[0]) - 1
+            sector_weight += user_weights[stock]
+            sector_return += stock_return * user_weights[stock]
         
-        return sector_return / n # Assume equal_weighting
+        adjusted_sector_return = sector_return / sector_weight # Adjusting for the weight of the stocks
+        return adjusted_sector_return
     else:
         return 0
 
@@ -374,7 +381,7 @@ def compute_allocation_effect(w_i, sector, region, period, idx_closes, benchmark
             B_i_q = (benchmark_sector_series_quarter.iloc[-1] / benchmark_sector_series_quarter.iloc[0]) - 1
             
             W_i_q = benchmark_weights[year][quarter][sector]
-            A_i_q = w_i[sector] * (B_i_q - B_q) - W_i_q * (B_i_q - B_q)
+            A_i_q = (w_i[sector] - W_i_q) * (B_i_q - B_q)
 
             A_i += A_i_q
             W_i_avg.append(W_i_q)
@@ -396,14 +403,15 @@ def attribute_regional_performance(idx_closes, equity_closes, user_weights, sect
     print("Atrributing Performance...")
     
     w_i = user_regional_sector_weights
-    R_i = {sector: compute_portfolio_sector_return(c, regional_sectors, sector, period) for sector in w_i}
+    R_i = {sector: compute_portfolio_sector_return(c, regional_sectors, sector, period, user_weights) for sector in w_i}
     B_i = {sector: compute_benchmark_sector_return(idx_closes, region, sector, period) for sector in w_i}
     S_i = {sector: compute_selection_effect(w_i, R_i, B_i, sector) for sector in w_i}
     A_i_W_i_Avg = {sector: compute_allocation_effect(w_i, sector, region, period, idx_closes, quarter_sector_weights_approx) for sector in w_i}
     A_i = {sector: A_i_W_i_Avg[sector][0] for sector in w_i}
     W_i_avg = {sector: A_i_W_i_Avg[sector][1] for sector in w_i}
 
-    B = (idx_closes[region][region].iloc[-1] / idx_closes[region][region].iloc[0]) - 1
+    B = (idx_closes[region][region].iloc[-1] / idx_closes[region][region].iloc[0]) - 1 
+
     print(region, " Benchmark performance: ", B)
     print(idx_closes[region][region])
     BrinsonFachlerModel = (pd.DataFrame([{
@@ -419,6 +427,8 @@ def attribute_regional_performance(idx_closes, equity_closes, user_weights, sect
         'Portfolio Weighted Return': R_i[sector] * w_i[sector],
         'Benchmark Weighted Return*': B_i[sector] * W_i_avg[sector]
     } for sector in sectors]).set_index('Sector'))
+    
+    # BrinsonFachlerModel.to_csv('./temp_data/bf_model_%s.csv' % region)
 
     R = (BrinsonFachlerModel['Portfolio Return'] * BrinsonFachlerModel['Portfolio Weight']).sum()
     
@@ -481,8 +491,8 @@ cfg = {
         "IBDSF": 0.056969947,
     },
     "benchmark_region_weights": {
-        "SPY": 0.614,
-        46323: 0.386
+        "SPY": 0.60,
+        46323: 0.40
     },
     "portfolio_equities_sector_classification": {
         "Communications": ["DIS","GOOG"],
@@ -525,6 +535,14 @@ cfg = {
     "portfolio_equities_region_classification": {
         "SPY": ["BLK","DIS","GOOG","WMT","PG","JNJ","MSFT","DG","WM"],
         46323: ["NSRGY","VWDRY","NVS","SBGSY","IBDSF"]
+    },
+    "approximate_sector_weights": {
+        "SPY": {"Communications":0.1078,"Consumer_Disrectionary":0.1083,"Consumer_Staples":0.0697,
+        "Energy_Renewables":0.0282,"Financials":0.1009,"Health_Care":0.0799,"Information_Technology":0.2747,
+        "Industrials":0.0799,"Utilities":0.0307,"Other":0.0535},
+        46323: {"Communications":0.0391,"Consumer_Disrectionary":0.0965,"Consumer_Staples":0.1351,
+        "Energy_Renewables":0.038,"Financials":0.1501,"Health_Care":0.1572,"Information_Technology":0.0778,
+        "Industrials":0.147,"Utilities":0.0456,"Other":0.1136}
     }
 }
 
@@ -542,6 +560,7 @@ def get_attribution_report():
     equity_regions = cfg['portfolio_equities_region_classification'] 
     index_sectors = cfg['index_sectors']
     benchmark_region_weights = cfg['benchmark_region_weights']
+    approximate_sector_weights = cfg["approximate_sector_weights"]
     
     idx_closes = get_index_closes(index_sectors, lookback_years, headers, start_date)   
     equity_closes = get_close_data(portfolio_equity_weights, lookback_years, headers)
@@ -551,7 +570,7 @@ def get_attribution_report():
     attribution_period = len(equity_closes)
     # Indivdidual Region Analysis
     for region in equity_regions.keys():
-        attribution[region] = attribute_regional_performance(idx_closes, equity_closes, portfolio_equity_weights, equity_sectors, equity_regions, region=region, period=attribution_period, verbose=True)
+        attribution[region] = attribute_regional_performance(idx_closes, equity_closes, portfolio_equity_weights, equity_sectors, equity_regions, region=region, period=attribution_period, verbose=True, force_sector_weights = approximate_sector_weights[region])
 
     # Overall Analysis
     # The regions become sectors
@@ -576,15 +595,42 @@ def get_attribution_report():
 
     idx_benchmark_closes['BENCHMARK'] = idx_benchmark
     idx_closes['BENCHMARK'] = idx_benchmark_closes
+    
+    EUROSTOXX = 46323
+
+    # Temp Data
+    # idx_benchmark_closes.to_csv('./temp_data/benchmarks.csv')
+    # equity_closes.to_csv('./temp_data/equities.csv')
+    # start = time.time() - lookback_years * 3600 * 24 * 365
+    # end = time.time()
+    # usd_to_eur = pd.DataFrame(get_yahoo_symbol_dataframe('EUR=X',headers=headers,start=start, end=end)['close'])
+    # usd_to_eur.to_csv('./temp_data/fx.csv')
+    # idx_closes['SPY'].to_csv('./temp_data/sector_benchmarks_US.csv')
+    # idx_closes[EUROSTOXX].to_csv('./temp_data/sector_benchmarks_EU.csv')
 
     # Attribute
     attribution['overall'] = attribute_regional_performance(idx_closes, equity_closes, portfolio_equity_weights, region_as_equity_sectors, world_as_equity_regions, region=region, period=attribution_period, verbose=True, force_sector_weights = benchmark_region_weights)
 
     # Formatted Output
-    EUROSTOXX = 46323
-    attribution_eu = attribution[EUROSTOXX]['model_df'][['Selection', 'Allocation']]
-    attribution_us = attribution['SPY']['model_df'][['Selection', 'Allocation']]
-    atrribution_effects = attribution_eu.merge(attribution_us, left_index=True, right_index=True, suffixes=('_EU','_US'))
+    attribution_eu = attribution[EUROSTOXX]['model_df'][['Selection', 'Allocation', 'Benchmark Return', 'Portfolio Return']]
+    attribution_eu.columns = ['Selection Effect', 'Allocation Effect', 'Benchmark Total Return', 'Portfolio Total Return']
+    attribution_eu['Total Effect'] = attribution_eu['Selection Effect'] + attribution_eu['Allocation Effect']
+    outperformance_eu = attribution_eu['Portfolio Total Return'] - attribution_eu['Benchmark Total Return']
+    eu_rescale_by = (attribution_eu['Total Effect']  / outperformance_eu).values.reshape((-1,1))
+    attribution_eu[['Selection Effect', 'Allocation Effect']] = attribution_eu[['Selection Effect', 'Allocation Effect']].values.reshape((-1,2)) / eu_rescale_by
+    attribution_eu['Total Effect'] = outperformance_eu
+
+    attribution_us = attribution['SPY']['model_df'][['Selection', 'Allocation', 'Benchmark Return', 'Portfolio Return']]
+    attribution_us.columns = ['Selection Effect', 'Allocation Effect', 'Benchmark Total Return', 'Portfolio Total Return']
+    attribution_us['Total Effect'] = attribution_us['Selection Effect'] + attribution_us['Allocation Effect']
+    outperformance_us = attribution_us['Portfolio Total Return'] - attribution_us['Benchmark Total Return']
+    
+    # These corrections are strictly true 
+    # The interpretation is in fact the Diference in weighted performances against the benchmark
+    # But the intepretation is close enough to the real thing to be quite useful, and thus sensible to rescale by.
+    us_rescale_by = (attribution_us['Total Effect']  / outperformance_us).values.reshape((-1,1))
+    attribution_us[['Selection Effect', 'Allocation Effect']] = attribution_us[['Selection Effect', 'Allocation Effect']].values.reshape((-1,2)) / us_rescale_by
+    attribution_us['Total Effect'] = outperformance_us
 
     portfolio_daily_returns = pd.DataFrame(equity_closes.iloc[:,:-1].pct_change().apply(get_weighted_close_fn(portfolio_equity_weights), axis=1).dropna())
     portfolio_daily_returns.columns=['PORTFOLIO']
@@ -603,7 +649,17 @@ def get_attribution_report():
     alpha, beta = (np.matmul(np.linalg.inv(np.matmul(X.T, X)), np.matmul(X.T, Y))).reshape(-1,)
     alpha, beta = round(alpha,3), round(beta,3)
     sharpe = round(sharpe.values[0],3)
+    
+    export_equities = {}
 
+    for sector in equity_sectors:
+        for col in equity_sectors[sector]:
+            sample_data = equity_closes[col].reset_index()
+            sample_data.columns = ['date','value']
+            sample_data['date'] = sample_data['date'].astype('str')
+
+            export_equities[sector.replace('_',' ').upper() + '_' + col.upper()] = json.loads(sample_data.to_json(orient='records'))
+        
     print("Fetching attribution report completed!")
 
     return {
@@ -619,6 +675,10 @@ def get_attribution_report():
                 "Europe": json.loads(attribution[EUROSTOXX]['aggregate_model_df'].to_json())['Returns (%)'],
                 "US": json.loads(attribution['SPY']['aggregate_model_df'].to_json())['Returns (%)'],
             },
-            "sectors": json.loads(atrribution_effects.T.round(2).to_json()),
-        }
+            "sectors": {
+                "Europe": json.loads(attribution_eu.T.round(2).to_json()),
+                "US": json.loads(attribution_us.T.round(2).to_json()),
+            },
+        },
+        "equities": export_equities
     }
