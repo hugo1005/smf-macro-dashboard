@@ -675,6 +675,8 @@ def get_attribution_report():
         46323: 'EU'
     }
 
+    get_port_weight = lambda sector, equities: sum([portfolio_equity_weights[equity] for equity in equities if equity in equity_sectors[sector]])
+
     weight_tree = {
         "children": [
             { 
@@ -682,11 +684,11 @@ def get_attribution_report():
                 "children": [
                     {
                         "name": map_region_names[region],
-                        "port_weight": sum([portfolio_equity_weights[equity] for equity in equities if equity in equity_sectors[sector]]),
-                        "benchmark_weight": approximate_sector_weights[region][sector],
+                        "port_weight": get_port_weight(sector, equities),
                         "colname":"level3"
                     } for region, equities in equity_regions.items()
                 ],
+                "benchmark_deviation": sum([(get_port_weight(sector, equities) - approximate_sector_weights[region][sector]) * benchmark_region_weights[region] for region, equities in equity_regions.items()]),
                 "colname":"level2"
             
             } for sector in equity_sectors
