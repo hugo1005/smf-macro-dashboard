@@ -696,7 +696,7 @@ def get_attribution_report():
                     } for region, equities_r in equity_regions.items()
                 ],
                 "port_sector_weight": sum([get_port_weight(equities_r, equities_s) for region, equities_r in equity_regions.items()]),
-                "benchmark_deviation": sum([(get_port_weight(equities, equities_s) - approximate_sector_weights[region][sector]) * benchmark_region_weights[region] for region, equities in equity_regions.items()])
+                "benchmark_deviation": sum([(get_port_weight(equities, equities_s) - approximate_sector_weights[region][sector] * benchmark_region_weights[region] ) for region, equities in equity_regions.items()])
                 
             } for sector, equities_s in equity_sectors.items()
         ],
