@@ -675,7 +675,9 @@ def get_attribution_report():
         46323: 'EU'
     }
 
-    get_port_weight = lambda sector, equities: sum([portfolio_equity_weights[equity] for equity in equities if equity in equity_sectors[sector]])
+    get_sector_regional_equities = lambda equities_r, equities_s: [equity for equity in equities_r if equity in equities_s]
+    get_sector_regional_equity_weights = lambda equitires_r, equities_s: [portfolio_equity_weights[eq] for eq in get_sector_regional_equities(equitires_r, equities_s)]
+    get_port_weight = lambda equities_r, equities_s: sum(get_sector_regional_equity_weights(equities_r, equities_s))
 
     weight_tree = {
         "children": [
@@ -684,14 +686,19 @@ def get_attribution_report():
                 "children": [
                     {
                         "name": map_region_names[region],
-                        "port_weight": get_port_weight(sector, equities),
-                        "colname":"level3"
-                    } for region, equities in equity_regions.items()
+                        "port_weight": get_port_weight(equities_r, equities_s),
+                        "children": [
+                            {
+                                "name": equity,
+                                "port_weight": portfolio_equity_weights[equity]
+                            }
+                        for equity in get_sector_regional_equities(equities_r, equities_s)]
+                    } for region, equities_r in equity_regions.items()
                 ],
-                "benchmark_deviation": sum([(get_port_weight(sector, equities) - approximate_sector_weights[region][sector]) * benchmark_region_weights[region] for region, equities in equity_regions.items()]),
-                "colname":"level2"
-            
-            } for sector in equity_sectors
+                "port_sector_weight": sum([get_port_weight(equities_r, equities_s) for region, equities_r in equity_regions.items()]),
+                "benchmark_deviation": sum([(get_port_weight(equities, equities_s) - approximate_sector_weights[region][sector]) * benchmark_region_weights[region] for region, equities in equity_regions.items()])
+                
+            } for sector, equities_s in equity_sectors.items()
         ],
         "name": "PORTFOLIO"
     }
