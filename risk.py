@@ -538,7 +538,7 @@ cfg = {
     },
     "approximate_sector_weights": {
         "SPY": {"Communications":0.1078,"Consumer_Disrectionary":0.1083,"Consumer_Staples":0.0697,
-        "Energy_Renewables":0.0282,"Financials":0.1009,"Health_Care":0.0799,"Information_Technology":0.2747,
+        "Energy_Renewables":0.0282,"Financials":0.1009,"Health_Care":0.1463,"Information_Technology":0.2747,
         "Industrials":0.0799,"Utilities":0.0307,"Other":0.0535},
         46323: {"Communications":0.0391,"Consumer_Disrectionary":0.0965,"Consumer_Staples":0.1351,
         "Energy_Renewables":0.038,"Financials":0.1501,"Health_Care":0.1572,"Information_Technology":0.0778,
@@ -696,7 +696,8 @@ def get_attribution_report():
                     } for region, equities_r in equity_regions.items()
                 ],
                 "port_sector_weight": sum([get_port_weight(equities_r, equities_s) for region, equities_r in equity_regions.items()]),
-                "benchmark_deviation": sum([(get_port_weight(equities, equities_s) - approximate_sector_weights[region][sector] * benchmark_region_weights[region] ) for region, equities in equity_regions.items()])
+                "port_benchmark_weight": sum([approximate_sector_weights[region][sector] * benchmark_region_weights[region] for region in equity_regions]),
+                "benchmark_deviation": sum([get_port_weight(equities, equities_s) - (approximate_sector_weights[region][sector] * benchmark_region_weights[region])  for region, equities in equity_regions.items()])
                 
             } for sector, equities_s in equity_sectors.items()
         ],
