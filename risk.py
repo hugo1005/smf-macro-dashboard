@@ -701,7 +701,8 @@ def get_attribution_report():
                 
             } for sector, equities_s in equity_sectors.items()
         ],
-        "name": "PORTFOLIO"
+        "name": "PORTFOLIO",
+        "region_weights": {map_region_names[region]: sum([portfolio_equity_weights[equity] for equity in equity_regions[region]]) for region in equity_regions}
     }
 
     return {
