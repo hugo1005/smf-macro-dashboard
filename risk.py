@@ -541,9 +541,9 @@ cfg = {
         "SPY": {"Communications":0.1078,"Consumer_Disrectionary":0.1083,"Consumer_Staples":0.0697,
         "Energy_Renewables":0.0282,"Financials":0.1009,"Health_Care":0.1463,"Information_Technology":0.2747,
         "Industrials":0.0799,"Utilities":0.0307,"Other":0.0535},
-        46323: {"Communications":0.0391,"Consumer_Disrectionary":0.0965,"Consumer_Staples":0.1351,
-        "Energy_Renewables":0.038,"Financials":0.1501,"Health_Care":0.1572,"Information_Technology":0.0778,
-        "Industrials":0.147,"Utilities":0.0456,"Other":0.1136}
+        46323: {"Communications":0.038 ,"Consumer_Disrectionary":0.107,"Consumer_Staples":0.125,
+        "Energy_Renewables":0.05,"Financials":0.155,"Health_Care":0.144,"Information_Technology":0.079,
+        "Industrials":0.151,"Utilities":0.049,"Other":0.102}
     }
 }
 
