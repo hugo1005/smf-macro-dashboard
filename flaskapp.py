@@ -67,7 +67,7 @@ def risk_data():
 
     if time.time() - last_updated_risk > one_day: 
         print("Updating Risk Data")
-        risk_data_obj = ri.get_attribution_report()
+        risk_data_obj = ri.get_risk_report()
         last_updated_risk = time.time() 
 
     return jsonify(risk_data_obj)

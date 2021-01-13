@@ -7,6 +7,7 @@ import json
 import time
 from gekko import GEKKO
 import scipy.stats as st
+from functools import reduce
 
 # Data Fetching Code
 
@@ -520,16 +521,16 @@ cfg = {
             "Other": {"weight": 0.109 , "tickers":["XLB","XLRE"]}
         },
         46323:{
-            "Communications": {"weight": 0.04 , "tickers":[46335,47545]},
-            "Consumer_Disrectionary": {"weight": 0.098 , "tickers":[38542]},
-            "Consumer_Staples": {"weight": 0.135, "tickers":[38548, 38545]},
-            "Energy_Renewables": {"weight": 0.021, "tickers":[38546]},
-            "Financials": {"weight": 0.144 , "tickers":[38543,46351,46344]},
-            "Health_Care": {"weight": 0.159 , "tickers":[46417]},
-            "Information_Technology":{"weight": 0.08 , "tickers":["EXV3.DE"]} ,
-            "Industrials": {"weight": 0.092 , "tickers":[38538]},
-            "Utilities": {"weight": 0.048 , "tickers":[46413]},
-            "Other": {"weight": 0.149 , "tickers": [47542,38551]}
+            "Communications": {"weight": 0.038 , "tickers":[46335,47545]},
+            "Consumer_Disrectionary": {"weight": 0.107 , "tickers":[38542]},
+            "Consumer_Staples": {"weight": 0.125, "tickers":[38548, 38545]},
+            "Energy_Renewables": {"weight": 0.05, "tickers":[38546]},
+            "Financials": {"weight": 0.155, "tickers":[38543,46351,46344]},
+            "Health_Care": {"weight": 0.144 , "tickers":[46417]},
+            "Information_Technology":{"weight": 0.079 , "tickers":["EXV3.DE"]} ,
+            "Industrials": {"weight": 0.151 , "tickers":[38538]},
+            "Utilities": {"weight": 0.049 , "tickers":[46413]},
+            "Other": {"weight": 0.102 , "tickers": [47542,38551]}
         }
     },
     "portfolio_equities_region_classification": {
@@ -546,33 +547,113 @@ cfg = {
     }
 }
 
-def get_attribution_report():
+def get_sector_regional_equities(equities_r, equities_s):
+    return [equity for equity in equities_r if equity in equities_s]
+
+def get_sector_regional_equity_weights(equitires_r, equities_s, portfolio_equity_weights):
+    return [portfolio_equity_weights[eq] for eq in get_sector_regional_equities(equitires_r, equities_s)]
+
+def get_port_weight(equities_r, equities_s, portfolio_equity_weights):
+    return sum(get_sector_regional_equity_weights(equities_r, equities_s, portfolio_equity_weights))
+
+def get_weighted_daily_returns(equity_closes, portfolio_equity_weights):
+    group_returns = np.zeros((equity_closes.shape[0] - 1,))
+
+    for eq in equity_closes.columns:
+        group_returns += equity_closes[eq].pct_change().dropna().values * portfolio_equity_weights[eq]
+
+    return group_returns
+
+def get_grouped_daily_returns(group_map, equity_closes, equity_weights):
+    index = equity_closes.index[1:]
+    
+    group_returns = {
+        group: get_weighted_daily_returns(equity_closes[symbols], equity_weights) 
+       
+        for group, symbols in group_map.items()
+    }
+    
+    df = pd.DataFrame(group_returns, index=index)
+
+    return df
+
+def get_grouped_daily_returns_benchmark_data(equity_sectors,equity_regions, idx_closes,benchmark_region_weights):
+    benchmark_sector_returns = {}
+    index_vals = [set(idx_closes[region].index[1:].values) for region in equity_regions]
+
+    
+    index = np.array(list(index_vals[0].intersection(*index_vals[1:]))).astype('datetime64')[1:]
+    
+    for sector in equity_sectors:
+        returns_sector = np.zeros(index.shape[0],)
+
+        for region in equity_regions:
+            filtered_data = idx_closes[region][sector].pct_change().dropna()
+            filtered_data = filtered_data[filtered_data.index.isin(index)]
+            
+            returns_sector += filtered_data.values * benchmark_region_weights[region] 
+
+        benchmark_sector_returns[sector] = returns_sector
+
+    return pd.DataFrame(benchmark_sector_returns, index=index)
+
+
+def multi_merge(data_frames,on_key=None, how='inner'):
+    if on_key:
+        df_merged = reduce(lambda  left,right: pd.merge(left,right,on=on_key, how=how), data_frames)
+    else:
+        df_merged = reduce(lambda  left,right: pd.merge(left,right,left_index=True, right_index=True,how=how), data_frames)
+
+    return df_merged
+
+def get_risk_report():
     print("Fetching attribution report")
     attribution = {}
 
+    # TODO Migrate to config
+    lookback_years = 2
+    EUROSTOXX = 46323
+    map_region_names = { # Sector -> Region (EU,US) Value Port and Value Benchmark
+        'SPY': 'US',
+        46323: 'EU'
+    }
+
+    # Parameters
     headers = cfg['headers']
     start_date = cfg['start_date']
-
-    # lookback_years = (current_date - start_date) / (3600 * 24 * 365)
-    lookback_years = 2
-    portfolio_equity_weights = cfg['portfolio_equity_weights']
-    equity_sectors = cfg['portfolio_equities_sector_classification']
-    equity_regions = cfg['portfolio_equities_region_classification'] 
+    portfolio_equity_weights = cfg['portfolio_equity_weights']  # Maps Stock -> Weight
+    equity_sectors = cfg['portfolio_equities_sector_classification']  # Maps Sector -> Stock
+    equity_regions = cfg['portfolio_equities_region_classification']  # Maps Region -> Stock
     index_sectors = cfg['index_sectors']
     benchmark_region_weights = cfg['benchmark_region_weights']
-    approximate_sector_weights = cfg["approximate_sector_weights"]
-    
+    approximate_sector_weights = cfg["approximate_sector_weights"] # Maps Region -> Sector -> Benchmark Weight
+
+    # Retrieve Data
     idx_closes = get_index_closes(index_sectors, lookback_years, headers, start_date)   
     equity_closes = get_close_data(portfolio_equity_weights, lookback_years, headers)
+    
+    # Compute Sector Daily Return Correlations:
+    portfolio_sector_returns = get_grouped_daily_returns(equity_sectors, equity_closes, portfolio_equity_weights)
+    benchmark_sector_returns = get_grouped_daily_returns_benchmark_data(equity_sectors,equity_regions, idx_closes,benchmark_region_weights)
+
+    psr_cols = [c + '_PORT' for c in portfolio_sector_returns.columns]
+    bsr_cols = [c + '_BENCH' for c in benchmark_sector_returns.columns]
+
+    port_bench_sector_returns = portfolio_sector_returns.merge(benchmark_sector_returns, left_index=True, right_index=True, suffixes=['_PORT','_BENCH'])
+    sector_correlations = port_bench_sector_returns.corr()
+    sector_correlations = sector_correlations[sector_correlations.index.isin(psr_cols)].T
+    sector_correlations = sector_correlations[sector_correlations.index.isin(bsr_cols)].T
+
+    # Indivdidual Region Analysis ========
 
     equity_closes = equity_closes[equity_closes.index >= pd.to_datetime(start_date, unit='s')]
 
     attribution_period = len(equity_closes)
-    # Indivdidual Region Analysis
+    
     for region in equity_regions.keys():
         attribution[region] = attribute_regional_performance(idx_closes, equity_closes, portfolio_equity_weights, equity_sectors, equity_regions, region=region, period=attribution_period, verbose=True, force_sector_weights = approximate_sector_weights[region])
 
-    # Overall Analysis
+    # Overall Analysis ==================
     # The regions become sectors
     region_as_equity_sectors = equity_regions
     # All stocks now become in one super region (the world)
@@ -595,18 +676,6 @@ def get_attribution_report():
 
     idx_benchmark_closes['BENCHMARK'] = idx_benchmark
     idx_closes['BENCHMARK'] = idx_benchmark_closes
-    
-    EUROSTOXX = 46323
-
-    # Temp Data
-    # idx_benchmark_closes.to_csv('./temp_data/benchmarks.csv')
-    # equity_closes.to_csv('./temp_data/equities.csv')
-    # start = time.time() - lookback_years * 3600 * 24 * 365
-    # end = time.time()
-    # usd_to_eur = pd.DataFrame(get_yahoo_symbol_dataframe('EUR=X',headers=headers,start=start, end=end)['close'])
-    # usd_to_eur.to_csv('./temp_data/fx.csv')
-    # idx_closes['SPY'].to_csv('./temp_data/sector_benchmarks_US.csv')
-    # idx_closes[EUROSTOXX].to_csv('./temp_data/sector_benchmarks_EU.csv')
 
     # Attribute
     attribution['overall'] = attribute_regional_performance(idx_closes, equity_closes, portfolio_equity_weights, region_as_equity_sectors, world_as_equity_regions, region=region, period=attribution_period, verbose=True, force_sector_weights = benchmark_region_weights)
@@ -661,24 +730,7 @@ def get_attribution_report():
             export_equities[sector.replace('_',' ').upper() + '_' + col.upper()] = json.loads(sample_data.to_json(orient='records'))
         
     print("Fetching attribution report completed!")
-
-
-    equity_sectors # Maps Sector -> Stock
-    equity_regions # Maps Region -> Stock
-    approximate_sector_weights # Maps Region -> Sector -> Benchmark Weight
-    portfolio_equity_weights # Maps Stock -> Weight
-
-    # Compute Tree 
-    # Sector -> Region (EU,US) Value Port and Value Benchmark
-    map_region_names = {
-        'SPY': 'US',
-        46323: 'EU'
-    }
-
-    get_sector_regional_equities = lambda equities_r, equities_s: [equity for equity in equities_r if equity in equities_s]
-    get_sector_regional_equity_weights = lambda equitires_r, equities_s: [portfolio_equity_weights[eq] for eq in get_sector_regional_equities(equitires_r, equities_s)]
-    get_port_weight = lambda equities_r, equities_s: sum(get_sector_regional_equity_weights(equities_r, equities_s))
-
+    print(sector_correlations)
     weight_tree = {
         "children": [
             { 
@@ -686,7 +738,7 @@ def get_attribution_report():
                 "children": [
                     {
                         "name": map_region_names[region],
-                        "port_weight": get_port_weight(equities_r, equities_s),
+                        "port_weight": get_port_weight(equities_r, equities_s, portfolio_equity_weights),
                         "children": [
                             {
                                 "name": equity,
@@ -695,9 +747,9 @@ def get_attribution_report():
                         for equity in get_sector_regional_equities(equities_r, equities_s)]
                     } for region, equities_r in equity_regions.items()
                 ],
-                "port_sector_weight": sum([get_port_weight(equities_r, equities_s) for region, equities_r in equity_regions.items()]),
+                "port_sector_weight": sum([get_port_weight(equities_r, equities_s, portfolio_equity_weights) for region, equities_r in equity_regions.items()]),
                 "port_benchmark_weight": sum([approximate_sector_weights[region][sector] * benchmark_region_weights[region] for region in equity_regions]),
-                "benchmark_deviation": sum([get_port_weight(equities, equities_s) - (approximate_sector_weights[region][sector] * benchmark_region_weights[region])  for region, equities in equity_regions.items()])
+                "benchmark_deviation": sum([get_port_weight(equities, equities_s, portfolio_equity_weights) - (approximate_sector_weights[region][sector] * benchmark_region_weights[region])  for region, equities in equity_regions.items()])
                 
             } for sector, equities_s in equity_sectors.items()
         ],
@@ -724,5 +776,8 @@ def get_attribution_report():
                 "US": json.loads(attribution_us.T.round(2).to_json()),
             },
         },
-        "equities": export_equities
+        "equities": export_equities,
+        "correlations": {
+            'portfolio_v_port': json.loads(sector_correlations.round(3).to_json()),
+        }
     }
