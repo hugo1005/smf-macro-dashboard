@@ -460,7 +460,7 @@ def attribute_regional_performance(idx_closes, equity_closes, user_weights, sect
     return {'model_df': model_df, 'aggregate_model_df': aggregate_model_df}
 
 cfg = {
-    "start_date": 1607641200,
+    "start_date": 1607558400,
     "headers": {
         "authority": "query1.finance.yahoo.com",
         "method": "GET",
