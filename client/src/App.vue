@@ -285,7 +285,7 @@ export default {
         let max_val = Math.max(...vals)
         
         let relative_size = r_unscaled / max_val
-        return Math.abs(relative_size * 30) + "%"
+        return Math.abs(relative_size * 20) + "%"
     },
     getAttributionGrad: function(r_unscaled) {
       if(r_unscaled >= 0) {

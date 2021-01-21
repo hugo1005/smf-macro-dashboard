@@ -491,6 +491,22 @@ cfg = {
         "SBGSY": 0.085525394,
         "IBDSF": 0.056969947,
     },
+    "portfolio_equity_entry_dates": { # Timw used is 1am on trade date - 1 day
+        "BLK": 1607389200,
+        "DIS": 1607475600,
+        "GOOG": 1607389200,
+        "WMT": 1607389200,
+        "PG": 1607389200,
+        "JNJ": 1607389200,
+        "MSFT":1607389200,
+        "DG": 1607389200,
+        "WM": 1607389200,
+        "NSRGY": 1607475600,
+        "VWDRY": 1607475600,
+        "NVS": 1607389200,
+        "SBGSY": 1607389200,
+        "IBDSF": 1607389200,
+    },
     "benchmark_region_weights": {
         "SPY": 0.60,
         46323: 0.40
@@ -627,11 +643,25 @@ def get_risk_report():
     index_sectors = cfg['index_sectors']
     benchmark_region_weights = cfg['benchmark_region_weights']
     approximate_sector_weights = cfg["approximate_sector_weights"] # Maps Region -> Sector -> Benchmark Weight
+    portfolio_equity_entry_dates = cfg["portfolio_equity_entry_dates"]
 
     # Retrieve Data
     idx_closes = get_index_closes(index_sectors, lookback_years, headers, start_date)   
     equity_closes = get_close_data(portfolio_equity_weights, lookback_years, headers)
     
+    export_equities = {}
+
+    for sector in equity_sectors:
+        for col in equity_sectors[sector]:
+            sample_data = equity_closes[col].reset_index()
+            sample_data.columns = ['date','value']
+            sample_data = sample_data[sample_data['date'] >= pd.to_datetime(portfolio_equity_entry_dates[col], unit='s')]
+            sample_data['date'] = sample_data['date'].astype('str')
+
+            export_equities[sector.replace('_',' ').upper() + '_' + col.upper()] = json.loads(sample_data.to_json(orient='records'))
+        
+
+
     # Compute Sector Daily Return Correlations:
     portfolio_sector_returns = get_grouped_daily_returns(equity_sectors, equity_closes, portfolio_equity_weights)
     benchmark_sector_returns = get_grouped_daily_returns_benchmark_data(equity_sectors,equity_regions, idx_closes,benchmark_region_weights)
@@ -719,16 +749,6 @@ def get_risk_report():
     alpha, beta = round(alpha,3), round(beta,3)
     sharpe = round(sharpe.values[0],3)
     
-    export_equities = {}
-
-    for sector in equity_sectors:
-        for col in equity_sectors[sector]:
-            sample_data = equity_closes[col].reset_index()
-            sample_data.columns = ['date','value']
-            sample_data['date'] = sample_data['date'].astype('str')
-
-            export_equities[sector.replace('_',' ').upper() + '_' + col.upper()] = json.loads(sample_data.to_json(orient='records'))
-        
     print("Fetching attribution report completed!")
     print(sector_correlations)
     weight_tree = {
