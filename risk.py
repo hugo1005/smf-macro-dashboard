@@ -506,6 +506,21 @@ cfg = {
         "NVS": 1607389200,
         "SBGSY": 1607389200,
         "IBDSF": 1607389200,
+    },"portfolio_equity_exit_dates": { # Timw used is 1am on trade date - 1 day
+        "BLK": -1,
+        "DIS": -1,
+        "GOOG": -1,
+        "WMT": 1614258000,
+        "PG": -1,
+        "JNJ": -1,
+        "MSFT":-1,
+        "DG": 1614344400,
+        "WM": -1,
+        "NSRGY": -1,
+        "VWDRY": 1615208400,
+        "NVS": -1,
+        "SBGSY": -1,
+        "IBDSF": -1,
     },
     "benchmark_region_weights": {
         "SPY": 0.60,
@@ -644,24 +659,49 @@ def get_risk_report():
     benchmark_region_weights = cfg['benchmark_region_weights']
     approximate_sector_weights = cfg["approximate_sector_weights"] # Maps Region -> Sector -> Benchmark Weight
     portfolio_equity_entry_dates = cfg["portfolio_equity_entry_dates"]
+    portfolio_equity_exit_dates = cfg["portfolio_equity_exit_dates"]
 
+    # replace -1 for equities we have not exited positions on with tomorrows date
+    portfolio_equity_exit_dates = {k:v if v > 0 else int(time.time() + 24*3600) for k,v in portfolio_equity_exit_dates.items()}
+    print("port dates...")
+    print(portfolio_equity_entry_dates)
+    print(portfolio_equity_exit_dates)
     # Retrieve Data
     idx_closes = get_index_closes(index_sectors, lookback_years, headers, start_date)   
     equity_closes = get_close_data(portfolio_equity_weights, lookback_years, headers)
     
     export_equities = {}
 
+    # For drawing equity price charts
     for sector in equity_sectors:
         for col in equity_sectors[sector]:
+            print(col)
             sample_data = equity_closes[col].reset_index()
             sample_data.columns = ['date','value']
+            
+            # Entry and exits
+
+            # # New 
+            s = pd.to_datetime(portfolio_equity_entry_dates[col], unit='s')
+            e = pd.to_datetime(portfolio_equity_exit_dates[col], unit='s')
+            f_val = float(sample_data[sample_data['date'] >= s]['value'].iloc[0])
+            l_val = float(sample_data[sample_data['date'] <= e]['value'].iloc[-1])
+
+            print(f_val, l_val)
+
+            # # Clipping data
+            sample_data['value'][sample_data['date'] < s] = f_val
+            sample_data['value'][sample_data['date'] > e] = l_val
+
+            # # Ensuring this is transferred into our risk engine
+            equity_closes[col] = sample_data['value'].values.reshape(-1,)
+            # # End New
+
             sample_data = sample_data[sample_data['date'] >= pd.to_datetime(portfolio_equity_entry_dates[col], unit='s')]
             sample_data['date'] = sample_data['date'].astype('str')
 
             export_equities[sector.replace('_',' ').upper() + '_' + col.upper()] = json.loads(sample_data.to_json(orient='records'))
         
-
-
     # Compute Sector Daily Return Correlations:
     portfolio_sector_returns = get_grouped_daily_returns(equity_sectors, equity_closes, portfolio_equity_weights)
     benchmark_sector_returns = get_grouped_daily_returns_benchmark_data(equity_sectors,equity_regions, idx_closes,benchmark_region_weights)
