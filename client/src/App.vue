@@ -574,6 +574,7 @@ export default {
     width: 100%;
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     padding-bottom: 16px;
     box-sizing: border-box;
@@ -582,14 +583,16 @@ export default {
   .port-stat {
     font-family: 'Roboto', sans-serif;;
     width: 90%;
+    max-width: 200px;
     background: #A84E4E70;
     display: flex;
     padding: 8px 8px;
+
     font-size: 10px;
     box-sizing: border-box;
     flex-direction: row;
     justify-content: space-between;
-    margin: 0px 4px;
+    margin: 4px 4px;
   }
 
   .port-stat-name {
