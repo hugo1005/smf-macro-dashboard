@@ -58,6 +58,22 @@
                 <div class='port-stat-value'>{{risk.portfolio_summary_stats.sharpe}}</div>
               </div>
               <div class='port-stat'>
+                <div class='port-stat-name'>SHARPE BENCH</div>
+                <div class='port-stat-value'>{{risk.portfolio_summary_stats.sharpe_bench}}</div>
+              </div>
+              <div class='port-stat'>
+                <div class='port-stat-name'>VOL</div>
+                <div class='port-stat-value'>{{risk.portfolio_summary_stats.vol}}</div>
+              </div>
+              <div class='port-stat'>
+                <div class='port-stat-name'>VOL BENCH</div>
+                <div class='port-stat-value'>{{risk.portfolio_summary_stats.vol_bench}}</div>
+              </div>
+              <div class='port-stat'>
+                <div class='port-stat-name'>R2</div>
+                <div class='port-stat-value'>{{risk.portfolio_summary_stats.R2}}</div>
+              </div>
+              <div class='port-stat'>
                 <div class='port-stat-name'>TRACKING ERROR</div>
                 <div class='port-stat-value'>{{risk.portfolio_summary_stats.tracking_error_pct}} %</div>
               </div>

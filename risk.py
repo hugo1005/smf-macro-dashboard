@@ -231,8 +231,6 @@ def fit_historical_sector_weights(region, idx_closes, force_sector_weights = Non
                 else:
                     quarter_sector_weights_approx[year][quarter] = force_sector_weights
 
-    print(region)
-    print(quarter_sector_weights_approx)
     return quarter_sector_weights_approx
 
 simple_return = lambda series, period, shift: (series.iloc[-1-shift] / series.iloc[-period-shift]) - 1
@@ -413,8 +411,6 @@ def attribute_regional_performance(idx_closes, equity_closes, user_weights, sect
 
     B = (idx_closes[region][region].iloc[-1] / idx_closes[region][region].iloc[0]) - 1 
 
-    print(region, " Benchmark performance: ", B)
-    print(idx_closes[region][region])
     BrinsonFachlerModel = (pd.DataFrame([{
         'Sector': sector,
         'Portfolio Return': R_i[sector],
@@ -663,9 +659,7 @@ def get_risk_report():
 
     # replace -1 for equities we have not exited positions on with tomorrows date
     portfolio_equity_exit_dates = {k:v if v > 0 else int(time.time() + 24*3600) for k,v in portfolio_equity_exit_dates.items()}
-    print("port dates...")
-    print(portfolio_equity_entry_dates)
-    print(portfolio_equity_exit_dates)
+
     # Retrieve Data
     idx_closes = get_index_closes(index_sectors, lookback_years, headers, start_date)   
     equity_closes = get_close_data(portfolio_equity_weights, lookback_years, headers)
@@ -675,7 +669,7 @@ def get_risk_report():
     # For drawing equity price charts
     for sector in equity_sectors:
         for col in equity_sectors[sector]:
-            print(col)
+     
             sample_data = equity_closes[col].reset_index()
             sample_data.columns = ['date','value']
             
@@ -687,7 +681,7 @@ def get_risk_report():
             f_val = float(sample_data[sample_data['date'] >= s]['value'].iloc[0])
             l_val = float(sample_data[sample_data['date'] <= e]['value'].iloc[-1])
 
-            print(f_val, l_val)
+          
 
             # # Clipping data
             sample_data['value'][sample_data['date'] < s] = f_val
@@ -778,19 +772,36 @@ def get_risk_report():
     benchmark_port_returns['DELTA'] = benchmark_port_returns['PORTFOLIO'] - benchmark_port_returns['BENCHMARK']
 
     tracking_error_pct = round(benchmark_port_returns['DELTA'].std() * 100,2)
-    sharpe = portfolio_daily_returns.mean() / portfolio_daily_returns.std()
+    vol = round(benchmark_port_returns['PORTFOLIO'].std() * 100, 2)
+    sharpe = round(portfolio_daily_returns.mean() / portfolio_daily_returns.std(),3)
+    vol_bench = round(benchmark_port_returns['BENCHMARK'].std() * 100, 2)
+    sharpe_bench = round(benchmark_port_returns['BENCHMARK'].mean() / benchmark_port_returns['BENCHMARK'].std(),2)
 
+    
     Y = benchmark_port_returns['PORTFOLIO'].values.reshape(-1,1)
     x_1 = benchmark_port_returns['BENCHMARK'].values.reshape(-1,)
+
     x_0 = np.ones(x_1.shape)
     X = np.array([x_0,x_1]).T
     
+    # Y = port x_1 = bench
     alpha, beta = (np.matmul(np.linalg.inv(np.matmul(X.T, X)), np.matmul(X.T, Y))).reshape(-1,)
     alpha, beta = round(alpha,3), round(beta,3)
+    fits = alpha * x_0 + beta * x_1
+    y_bar = np.mean(Y)
+
+    RSS = np.sum((Y.reshape(-1) - fits) ** 2)
+    TSS = np.sum((Y.reshape(-1) - y_bar) ** 2)
+
+    R2 = round(1 - (RSS / TSS),3)
     sharpe = round(sharpe.values[0],3)
-    
+
+    print(benchmark_port_returns)
+    bench_returns = json.loads(pd.DataFrame(benchmark_port_returns['BENCHMARK']).to_json())
+    port_returns = json.loads(pd.DataFrame(benchmark_port_returns['PORTFOLIO']).to_json())
+
     print("Fetching attribution report completed!")
-    print(sector_correlations)
+
     weight_tree = {
         "children": [
             { 
@@ -820,9 +831,13 @@ def get_risk_report():
     return {
         "portfolio_summary_stats": {
             "sharpe": sharpe,
+            "sharpe_bench": sharpe_bench,
             "alpha": alpha,
             "beta": beta,
+            "R2": R2,
             "tracking_error_pct": tracking_error_pct,
+            "vol": vol,
+            "vol_bench": vol_bench,
         },
         "weightings": weight_tree,
         "attribution": {
@@ -839,5 +854,9 @@ def get_risk_report():
         "equities": export_equities,
         "correlations": {
             'portfolio_v_port': json.loads(sector_correlations.round(3).to_json()),
+        },
+        "portfolios": {
+            'BENCH': bench_returns,
+            'PORT': port_returns
         }
     }
