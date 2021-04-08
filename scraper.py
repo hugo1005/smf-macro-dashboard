@@ -1,3 +1,4 @@
+from typing import type_check_only
 import requests
 import pandas as pd
 import json
@@ -140,17 +141,20 @@ indexes_forex = {
 }
 
 def scrape_macro_indicator(indicator_name, indicator_country, indicator_code, indicator_category):
-    data = requests.get('https://sbcharts.investing.com/events_charts/us/%s.json' % indicator_code, headers=headers_investing).json()
-    df = pd.DataFrame(data['attr'])
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-    df = df.set_index('timestamp')
-    df.index = df.index.date
-    # df = df[['actual_state', 'actual']]
-    df = df[['actual']]
-    # df.columns = ['%s_%s_vs_forecast' % (indicator_name,indicator_country),'%s_%s_value'% (indicator_name,indicator_country)]
-    df.columns = ['%s_%s_%s'% (indicator_category, indicator_name,indicator_country)]
+    try: 
+        data = requests.get('https://sbcharts.investing.com/events_charts/us/%s.json' % indicator_code, headers=headers_investing).json()
+        df = pd.DataFrame(data['attr'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        df = df.set_index('timestamp')
+        df.index = df.index.date
+        # df = df[['actual_state', 'actual']]
+        df = df[['actual']]
+        # df.columns = ['%s_%s_vs_forecast' % (indicator_name,indicator_country),'%s_%s_value'% (indicator_name,indicator_country)]
+        df.columns = ['%s_%s_%s'% (indicator_category, indicator_name,indicator_country)]
 
-    return df
+        return df
+    except:
+        return None
 
 def scrape_data():
     print("Scraping Macro Data")
@@ -162,7 +166,12 @@ def scrape_data():
         indicator_code = indicator_obj['indicator_code']
         indicator_category = indicator_obj['category']
 
-        macro_indicators_data.append(scrape_macro_indicator(indicator_name, indicator_country, indicator_code, indicator_category))
+        res = scrape_macro_indicator(indicator_name, indicator_country, indicator_code, indicator_category)
+
+        if type(res) != type(None):
+            macro_indicators_data.append(res)
+        else:
+            print("failed for %s %s" % (indicator_name, indicator_country))
 
     index_indicators = []
 
