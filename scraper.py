@@ -140,8 +140,11 @@ indexes_forex = {
 }
 
 def scrape_macro_indicator(indicator_name, indicator_country, indicator_code, indicator_category):
+    res = None
     try: 
-        data = requests.get('https://sbcharts.investing.com/events_charts/us/%s.json' % indicator_code, headers=headers_investing).json()
+        res = requests.get('https://sbcharts.investing.com/events_charts/us/%s.json' % indicator_code, headers=headers_investing)
+        data = res.json()
+        
         df = pd.DataFrame(data['attr'])
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
         df = df.set_index('timestamp')
@@ -153,6 +156,7 @@ def scrape_macro_indicator(indicator_name, indicator_country, indicator_code, in
 
         return df
     except:
+        print(res.text)
         return None
 
 def scrape_data():
