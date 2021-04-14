@@ -773,9 +773,9 @@ def get_risk_report():
 
     tracking_error_pct = round(benchmark_port_returns['DELTA'].std() * 100,2)
     vol = round(benchmark_port_returns['PORTFOLIO'].std() * 100, 2)
-    sharpe = round(portfolio_daily_returns.mean() / portfolio_daily_returns.std(),3) * np.sqrt(252)
+    sharpe = round((portfolio_daily_returns.mean() / portfolio_daily_returns.std()) * np.sqrt(252),3) 
     vol_bench = round(benchmark_port_returns['BENCHMARK'].std() * 100, 2)
-    sharpe_bench = round(benchmark_port_returns['BENCHMARK'].mean() / benchmark_port_returns['BENCHMARK'].std(),2) * np.sqrt(252)
+    sharpe_bench = round((benchmark_port_returns['BENCHMARK'].mean() / benchmark_port_returns['BENCHMARK'].std()) * np.sqrt(252) ,2) 
 
     
     Y = benchmark_port_returns['PORTFOLIO'].values.reshape(-1,1)
